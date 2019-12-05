@@ -2,19 +2,25 @@ package com.example.bluetooth;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.ImageView;
 import android.widget.Toast;
+import android.widget.LinearLayout;
 
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 public class MainActivity extends AppCompatActivity {
 
@@ -24,8 +30,10 @@ public class MainActivity extends AppCompatActivity {
     TextView mStatusBlueTv, mPairedTv, mDiscoveredTv;
     ImageView mBlueIv;
     Button mOnOffBtn, mDiscoverableBtn, mDiscoverBtn, mPairedBtn;
-
     BluetoothAdapter mBlueAdapter;
+    LinearLayout MainLayout;
+    ArrayList<CheckBox> ListBoxes = new ArrayList<CheckBox>();
+    Map<String, String> mapDevices;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         mDiscoverableBtn = findViewById(R.id.discoverableBtn);
         mDiscoverBtn = findViewById(R.id.discoverBtn);
         mPairedBtn = findViewById(R.id.pairedBtn);
-
+        MainLayout = findViewById(R.id.linear_main);
         //adapter
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -101,10 +109,16 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view){
               if(mBlueAdapter.isEnabled())
               {
+                  ListBoxes.clear();
                   IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
                   registerReceiver(reciever, filter);
                   mDiscoveredTv.setText("Discovered devices:");
-                  mBlueAdapter.startDiscovery();
+                 // mBlueAdapter.startDiscovery();
+                  DiscoverThread d = new DiscoverThread((mBlueAdapter));
+                  d.run();
+                  mDiscoveredTv.append( String.valueOf(ListBoxes.size()));
+                  createDeviceList();
+
               }
               else
               {
@@ -137,18 +151,41 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private final BroadcastReceiver reciever = new BroadcastReceiver() {
+    protected final BroadcastReceiver reciever = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if(BluetoothDevice.ACTION_FOUND.equals(action))
             {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                mDiscoveredTv.append("\n" + device.getName() + "," + device );
+               // mDiscoveredTv.append("\n" + device.getName() + "," + device );
+                CheckBox cb = new CheckBox(getApplicationContext());
+                cb.setText(device.getName() +": " + device.getAddress());
+                //MainLayout.addView(cb);
+                ListBoxes.add(cb);
             }
         }
     };
 
+    public void searchForDevices()
+    {
+        mBlueAdapter.startDiscovery();
+    }
+    // Function that creates the list of visible devices
+    private void createDeviceList()
+    {
+        //CheckBox testBox = new CheckBox(getApplicationContext());
+        //testBox.setText("testBox");
+        //ListBoxes.add(testBox);
+        for(int i=0; i<ListBoxes.size(); i++)
+        {
+            MainLayout.removeView(findViewById(i));
+            CheckBox cb = ListBoxes.get(i);
+            cb.setId(i);
+            //ListBoxes.get(i).setId(i);
+            MainLayout.addView(ListBoxes.get(i));
+        }
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
@@ -177,3 +214,28 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 }
+class DiscoverThread extends Thread
+{
+    BluetoothAdapter adapter;
+    DiscoverThread(BluetoothAdapter adapter)
+    {
+        this.adapter = adapter;
+    }
+    public void run()
+    {
+        adapter.startDiscovery();
+    }
+}
+
+/*
+public class myAsyncTask extends AsyncTask<Void, Void, Void>
+{
+    @Override
+    protected Void doInBackground(Void... params)
+    {
+
+        return null;
+    }
+
+}
+*/
