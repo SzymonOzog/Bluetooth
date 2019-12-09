@@ -3,25 +3,33 @@ package com.example.bluetooth;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.LinearLayout;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENABLE_BT = 0;
@@ -30,10 +38,18 @@ public class MainActivity extends AppCompatActivity {
     TextView mStatusBlueTv, mPairedTv, mDiscoveredTv;
     ImageView mBlueIv;
     Button mOnOffBtn, mDiscoverableBtn, mDiscoverBtn, mPairedBtn;
-    BluetoothAdapter mBlueAdapter;
+    ListView mDevicesLv;
+    ProgressDialog progress;
     LinearLayout MainLayout;
     ArrayList<CheckBox> ListBoxes = new ArrayList<CheckBox>();
-    Map<String, String> mapDevices;
+    ArrayList<String> ListAdresses = new ArrayList<String>();
+    ArrayList listDevices = new ArrayList();
+    ArrayAdapter adapter;
+    String MACAddress;
+    BluetoothAdapter mBlueAdapter;
+    BluetoothSocket mBlueSocket;
+    Boolean isBlueConnected=false;
+    final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,9 +63,11 @@ public class MainActivity extends AppCompatActivity {
         mDiscoverableBtn = findViewById(R.id.discoverableBtn);
         mDiscoverBtn = findViewById(R.id.discoverBtn);
         mPairedBtn = findViewById(R.id.pairedBtn);
+        mDevicesLv = findViewById(R.id.devicesLv);
         MainLayout = findViewById(R.id.linear_main);
         //adapter
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
+
 
         //check if bluetooth is available
         if(mBlueAdapter==null)
@@ -103,50 +121,64 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //discover devices
-        mDiscoverBtn.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View view){
-              if(mBlueAdapter.isEnabled())
-              {
-                  ListBoxes.clear();
-                  IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-                  registerReceiver(reciever, filter);
-                  mDiscoveredTv.setText("Discovered devices:");
-                 // mBlueAdapter.startDiscovery();
-                  DiscoverThread d = new DiscoverThread((mBlueAdapter));
-                  d.run();
-                  mDiscoveredTv.append( String.valueOf(ListBoxes.size()));
-                  createDeviceList();
 
-              }
-              else
-              {
-                  showToast("Please turn Bluetooth on");
-              }
-            }
-        });
 
         //get paired devices btn click
         mPairedBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mPairedTv.setText("Paired Devices:");
+                listDevices.clear();
                 if(mBlueAdapter.isEnabled())
                 {
                     Set<BluetoothDevice> devices = mBlueAdapter.getBondedDevices();
-                    for(BluetoothDevice device: devices)
+                   if(devices.size()>0)
+                   {
+                       for (BluetoothDevice device : devices)
+                       {
+                           listDevices.add("\n Paired: " + device.getName() + ": " + device.getAddress());
+                       }
+                   }
+                   else
                     {
-                        mPairedTv.append("\n" + device.getName() + "," + device );
+                       showToast("There are no paired devices");
                     }
+
+                    IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+                    registerReceiver(reciever, filter);
+                    mDiscoveredTv.setText("Discovered devices:");
+                    mBlueAdapter.startDiscovery();
+
+                    adapter = new ArrayAdapter(MainActivity.this, android.R.layout.simple_list_item_1, listDevices);
+                    mDevicesLv.setAdapter(adapter);
                 }
                 else
                 {
                     //Bluetooth is off
                     showToast("Please turn bluetooth on to get paired devices");
                 }
+
+
             }
         });
+
+        mDevicesLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                //we no longer need to look for devices since
+                // we found the one we want to connect with
+                mBlueAdapter.cancelDiscovery();
+                //get the devices MAC address
+                String info = ((TextView) view).getText().toString();
+                MACAddress = getMACAddress(info);
+                BluetoothDevice device = mBlueAdapter.getRemoteDevice(MACAddress);
+                if(device.getBondState()==BluetoothDevice.BOND_NONE)
+                new BTPair().execute();
+                if(device.getBondState()==BluetoothDevice.BOND_BONDED)
+                new  BTConnect().execute();
+            }
+        });
+
+//
 
 
     }
@@ -155,36 +187,27 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            // whenever a device is found make a checkbox with its name and MAC adress
+            //then add it to a list of checkboxes
             if(BluetoothDevice.ACTION_FOUND.equals(action))
             {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-               // mDiscoveredTv.append("\n" + device.getName() + "," + device );
-                CheckBox cb = new CheckBox(getApplicationContext());
-                cb.setText(device.getName() +": " + device.getAddress());
-                //MainLayout.addView(cb);
-                ListBoxes.add(cb);
+              // mDiscoveredTv.append("\n" + device.getName() + "," + device );
+//                CheckBox cb = new CheckBox(getApplicationContext());
+//                cb.setText(device.getName() +": " + device.getAddress());
+//                cb.setId(ListBoxes.size());
+//                MainLayout.addView(cb);
+//                ListBoxes.add(cb);
+                listDevices.add("\n Visible: " + device.getName() + ": " + device.getAddress());
+                adapter.notifyDataSetChanged();
             }
+
         }
     };
 
-    public void searchForDevices()
+    private String getMACAddress(String hasAddress)
     {
-        mBlueAdapter.startDiscovery();
-    }
-    // Function that creates the list of visible devices
-    private void createDeviceList()
-    {
-        //CheckBox testBox = new CheckBox(getApplicationContext());
-        //testBox.setText("testBox");
-        //ListBoxes.add(testBox);
-        for(int i=0; i<ListBoxes.size(); i++)
-        {
-            MainLayout.removeView(findViewById(i));
-            CheckBox cb = ListBoxes.get(i);
-            cb.setId(i);
-            //ListBoxes.get(i).setId(i);
-            MainLayout.addView(ListBoxes.get(i));
-        }
+        return hasAddress.substring(hasAddress.length() - 17);
     }
 
     @Override
@@ -213,29 +236,55 @@ public class MainActivity extends AppCompatActivity {
     {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
-}
-class DiscoverThread extends Thread
-{
-    BluetoothAdapter adapter;
-    DiscoverThread(BluetoothAdapter adapter)
-    {
-        this.adapter = adapter;
-    }
-    public void run()
-    {
-        adapter.startDiscovery();
-    }
-}
 
-/*
-public class myAsyncTask extends AsyncTask<Void, Void, Void>
-{
-    @Override
-    protected Void doInBackground(Void... params)
+
+
+    private class BTPair extends AsyncTask<Void, Void, Void>
     {
 
-        return null;
+
+        @Override
+        protected Void doInBackground(Void... devices)
+        {
+            BluetoothDevice device = mBlueAdapter.getRemoteDevice(MACAddress);
+            device.createBond();
+            return null;
+        }
+
     }
 
+    private class BTConnect extends AsyncTask<Void, Void, Void>
+    {
+        @Override
+        protected void onPreExecute()
+        {
+          //  progress = ProgressDialog.show(MainActivity.this, "Connecting...", "Please wait!");
+        }
+
+        @Override
+        protected Void doInBackground(Void... devices)
+        {
+            try
+            {
+                if(mBlueSocket==null||!isBlueConnected)
+                {
+                    BluetoothDevice device = mBlueAdapter.getRemoteDevice(MACAddress);
+                    mBlueSocket = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+                    mBlueSocket.connect();
+                    isBlueConnected=true;
+                }
+            }
+            catch(IOException e)
+            {
+               // showToast("Could not connect to device");
+               // progress = ProgressDialog.show(MainActivity.this, "Connecting...", );
+                Log.e("","Connect method failed", e);
+            }
+            return null;
+        }
+
+    }
+
+
 }
-*/
+

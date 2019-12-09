@@ -56,19 +56,12 @@
         android:layout_height="wrap_content"
         android:text="Discover Devices"
         style="@style/Widget.AppCompat.Button.Colored"/>
-    <!--Show paired devices here-->
-    <TextView
-        android:id="@+id/pairedTv"
-        android:minWidth="200dp"
-        android:text=""
-        android:textColor="#000"
+    <!--Choose a device to connect to here-->
+    <ListView
+        android:id="@+id/devicesLv"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-    <TextView
-        android:id="@+id/discoveredTv"
-        android:minWidth="200dp"
-        android:text=""
-        android:textColor="#000"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        />
+
+
 </LinearLayout>
