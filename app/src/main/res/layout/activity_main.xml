@@ -1,67 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:id="@+id/table_main"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
     android:orientation="vertical"
-    android:gravity="center_horizontal"
-    tools:context=".MainActivity"
-    android:id="@+id/linear_main">
+    tools:context=".MainActivity">
 
-    <!-- Display if bluetooth is available or not-->
-    <TextView
-        android:id="@+id/statusBluetoothTv"
-        android:layout_width="match_parent"
+    <TableRow
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=""
-        android:textAlignment="center"
-        android:textSize="20sp"
-        android:textColor="#000" />
+        android:gravity="center_horizontal">
+
+        <!-- Display if bluetooth is available or not-->
+        <TextView
+            android:id="@+id/statusBluetoothTv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textAlignment="center"
+            android:textColor="#000"
+            android:textSize="20sp" />
+    </TableRow>
+
+    <TableRow
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal">
         <!--bluetooth icon on/off-->
-    <ImageView
-        android:id="@+id/bluetoothIv"
-        android:layout_width="100dp"
-        android:layout_height="100dp" />
-    <!--On/Off Button-->
-    <Button
-        android:id="@+id/onOffBtn"
-        android:minWidth="200dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Turn On/Off"
-        style="@style/Widget.AppCompat.Button.Colored"/>
+        <ImageView
+            android:id="@+id/bluetoothIv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:adjustViewBounds="false"
+            android:scaleType="fitCenter" />
+    </TableRow>
 
-    <Button
-        android:id="@+id/discoverableBtn"
-        android:minWidth="200dp"
+
+
+    <TableRow
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Make Visible"
-        style="@style/Widget.AppCompat.Button.Colored"/>
-    <!--Get list of paired devices button-->
-    <Button
-        android:id="@+id/pairedBtn"
-        android:minWidth="200dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Get Paired Devices"
-        style="@style/Widget.AppCompat.Button.Colored"/>
+
+        >
+
+        <Button
+            android:id="@+id/discoverableBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Make Visible" />
+
+        <!--On/Off Button-->
+        <Button
+            android:id="@+id/onOffBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Turn On/Off" />
+
+        <!--Get list of paired devices button-->
+        <Button
+            android:id="@+id/showBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Show Devices" />
+    </TableRow>
+
     <!--Discover devices button-->
-    <Button
-        android:id="@+id/discoverBtn"
-        android:minWidth="200dp"
+    <TableRow
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Discover Devices"
-        style="@style/Widget.AppCompat.Button.Colored"/>
-    <!--Choose a device to connect to here-->
-    <ListView
-        android:id="@+id/devicesLv"
-        android:layout_width="match_parent"
+        android:gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/discoverBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+
+            android:text="Discover Devices" />
+
+    </TableRow>
+
+
+    <TableRow
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        />
+        android:gravity="center_horizontal">
+
+        <!--Set the temperature warning -->
+        <Button
+            android:id="@+id/setAlTemBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Set Alarm" />
+
+        <!--Get list of paired devices button-->
+        <Button
+            android:id="@+id/getAlTemBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Get Alarm Value" />
+
+        <!--Get list of paired devices button-->
+        <Button
+            android:id="@+id/checkTemBtn"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Check temperature" />
 
 
-</LinearLayout>
+    </TableRow>
+
+    <!--Choose a device to connect to here-->
+    <TableRow
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal">
+
+        <ListView
+            android:id="@+id/devicesLv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </TableRow>
+
+
+</TableLayout>

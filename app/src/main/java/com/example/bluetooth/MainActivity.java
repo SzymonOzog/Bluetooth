@@ -35,14 +35,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_DISCOVER_BT = 1;
 
-    TextView mStatusBlueTv, mPairedTv, mDiscoveredTv;
+    TextView mStatusBlueTv;
     ImageView mBlueIv;
-    Button mOnOffBtn, mDiscoverableBtn, mDiscoverBtn, mPairedBtn;
+    Button mOnOffBtn, mDiscoverableBtn, mDiscoverBtn, mShowBtn, mSetAlTempBtn, mGetAlTempBtn, mCheckTempBtn;
     ListView mDevicesLv;
-    ProgressDialog progress;
     LinearLayout MainLayout;
-    ArrayList<CheckBox> ListBoxes = new ArrayList<CheckBox>();
-    ArrayList<String> ListAdresses = new ArrayList<String>();
     ArrayList listDevices = new ArrayList();
     ArrayAdapter adapter;
     String MACAddress;
@@ -56,15 +53,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mStatusBlueTv = findViewById(R.id.statusBluetoothTv);
-        mPairedTv = findViewById(R.id.pairedTv);
-        mDiscoveredTv = findViewById(R.id.discoveredTv);
         mBlueIv = findViewById(R.id.bluetoothIv);
         mOnOffBtn = findViewById(R.id.onOffBtn);
         mDiscoverableBtn = findViewById(R.id.discoverableBtn);
         mDiscoverBtn = findViewById(R.id.discoverBtn);
-        mPairedBtn = findViewById(R.id.pairedBtn);
+        mShowBtn = findViewById(R.id.showBtn);
+        mSetAlTempBtn = findViewById(R.id.setAlTemBtn);
+        mGetAlTempBtn = findViewById(R.id.getAlTemBtn);
+        mCheckTempBtn = findViewById(R.id.checkTemBtn);
+
         mDevicesLv = findViewById(R.id.devicesLv);
-        MainLayout = findViewById(R.id.linear_main);
+        MainLayout = findViewById(R.id.table_main);
         //adapter
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -124,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         //get paired devices btn click
-        mPairedBtn.setOnClickListener(new View.OnClickListener() {
+        mShowBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 listDevices.clear();
@@ -145,7 +144,6 @@ public class MainActivity extends AppCompatActivity {
 
                     IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
                     registerReceiver(reciever, filter);
-                    mDiscoveredTv.setText("Discovered devices:");
                     mBlueAdapter.startDiscovery();
 
                     adapter = new ArrayAdapter(MainActivity.this, android.R.layout.simple_list_item_1, listDevices);
@@ -178,6 +176,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mGetAlTempBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try
+                {
+                    mBlueSocket.getOutputStream().write("02".getBytes());
+                }
+                catch(IOException e)
+                {
+                    showToast("Error sending Get Alarm Temperature code");
+
+                }
+
+            }
+        });
 //
 
 
