@@ -2,28 +2,36 @@ package com.example.bluetooth;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.LinearLayout;
+
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_DISCOVER_BT = 1;
+    private static AlertDialog.Builder builder;
+    private static EditText input;
 
     TextView mStatusBlueTv;
     ImageView mBlueIv;
@@ -43,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     ArrayList listDevices = new ArrayList();
     ArrayAdapter adapter;
     String MACAddress;
+    int mAlTemp;
     BluetoothAdapter mBlueAdapter;
     BluetoothSocket mBlueSocket;
     Boolean isBlueConnected=false;
@@ -61,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
         mSetAlTempBtn = findViewById(R.id.setAlTemBtn);
         mGetAlTempBtn = findViewById(R.id.getAlTemBtn);
         mCheckTempBtn = findViewById(R.id.checkTemBtn);
-
         mDevicesLv = findViewById(R.id.devicesLv);
         MainLayout = findViewById(R.id.table_main);
         //adapter
@@ -181,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 try
                 {
-                    mBlueSocket.getOutputStream().write("02".getBytes());
+                    mBlueSocket.getOutputStream().write(0x002);
                 }
                 catch(IOException e)
                 {
@@ -191,7 +201,51 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-//
+
+        mSetAlTempBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+               // final String mSetAlTempCode = "01 " + Integer.toString(mAlTemp);
+                builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("Set alarm temperature");
+
+
+                builder.setMessage("Enter the alarm temperature in CELSIUS DEGREES");
+
+
+
+                input = new EditText(MainActivity.this);
+                input.setInputType(InputType.TYPE_CLASS_NUMBER);
+                builder.setView(input);
+
+                builder.setPositiveButton("Set", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        try {
+                            mAlTemp = Integer.parseInt(input.getText().toString());
+                        }
+                        catch (NumberFormatException e)
+                        {
+                            showToast("Field cannot be empty");
+                        }
+
+                    }
+                });
+
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+                    }
+                });
+
+                new getTemperatureAl().execute();
+
+
+
+            }
+        });
 
 
     }
@@ -296,6 +350,33 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
+    }
+
+    private class getTemperatureAl extends AsyncTask<Void, Void, Void>
+    {
+        @Override
+        protected Void doInBackground(Void... arg)
+        {
+
+
+            builder.show();
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result)
+        {
+            try
+            {
+                mBlueSocket.getOutputStream().write(0x001);
+                mBlueSocket.getOutputStream().write(mAlTemp);
+                // mBlueSocket.getOutputStream().write(Integer.toString(mAlTemp).getBytes());
+            }
+            catch (IOException e)
+            {
+                showToast("Error sending Set Alarm Temperature code");
+            }
+        }
     }
 
 
