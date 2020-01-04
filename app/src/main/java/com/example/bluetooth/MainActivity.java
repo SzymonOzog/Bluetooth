@@ -2,10 +2,8 @@ package com.example.bluetooth;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -16,24 +14,21 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Html;
 import android.text.InputType;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.LinearLayout;
-
-import org.w3c.dom.Text;
-
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
@@ -42,21 +37,24 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_DISCOVER_BT = 1;
+    private static final String TAG = MainActivity.class.getSimpleName();
     private static AlertDialog.Builder builder;
     private static EditText input;
+    private ReadThread mReadThread;
 
-    TextView mStatusBlueTv;
+    TextView mStatusBlueTv, mInputTv;
     ImageView mBlueIv;
-    Button mOnOffBtn, mDiscoverableBtn, mDiscoverBtn, mShowBtn, mSetAlTempBtn, mGetAlTempBtn, mCheckTempBtn;
+    Button mOnOffBtn, mDiscoverableBtn, mDisconnectBtn, mShowBtn, mSetAlTempBtn, mGetAlTempBtn, mCheckTempBtn;
     ListView mDevicesLv;
     LinearLayout MainLayout;
     ArrayList listDevices = new ArrayList();
     ArrayAdapter adapter;
-    String MACAddress;
+    String MACAddress, info;
     int mAlTemp;
     BluetoothAdapter mBlueAdapter;
     BluetoothSocket mBlueSocket;
     Boolean isBlueConnected=false;
+    Boolean gotInput = false;
     final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     @Override
@@ -64,10 +62,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mStatusBlueTv = findViewById(R.id.statusBluetoothTv);
+        mInputTv = findViewById(R.id.inputTv);
         mBlueIv = findViewById(R.id.bluetoothIv);
         mOnOffBtn = findViewById(R.id.onOffBtn);
         mDiscoverableBtn = findViewById(R.id.discoverableBtn);
-        mDiscoverBtn = findViewById(R.id.discoverBtn);
+        mDisconnectBtn = findViewById(R.id.disconnectBtn);
         mShowBtn = findViewById(R.id.showBtn);
         mSetAlTempBtn = findViewById(R.id.setAlTemBtn);
         mGetAlTempBtn = findViewById(R.id.getAlTemBtn);
@@ -77,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         //adapter
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
 
-
+        mInputTv.setMovementMethod(new ScrollingMovementMethod());
         //check if bluetooth is available
         if(mBlueAdapter==null)
         {
@@ -144,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
                    {
                        for (BluetoothDevice device : devices)
                        {
-                           listDevices.add("\n Paired: " + device.getName() + ": " + device.getAddress());
+                           listDevices.add("\nPaired: " + device.getName() + ": " + device.getAddress());
                        }
                    }
                    else
@@ -169,51 +168,40 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mDevicesLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                //we no longer need to look for devices since
-                // we found the one we want to connect with
-                mBlueAdapter.cancelDiscovery();
-                //get the devices MAC address
-                String info = ((TextView) view).getText().toString();
-                MACAddress = getMACAddress(info);
-                BluetoothDevice device = mBlueAdapter.getRemoteDevice(MACAddress);
-                if(device.getBondState()==BluetoothDevice.BOND_NONE)
-                new BTPair().execute();
-                if(device.getBondState()==BluetoothDevice.BOND_BONDED)
-                new  BTConnect().execute();
-            }
-        });
-
-        mGetAlTempBtn.setOnClickListener(new View.OnClickListener() {
+        mDisconnectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 try
                 {
-                    mBlueSocket.getOutputStream().write(0x002);
+                    mBlueSocket.close();
+                    mBlueSocket = null;
+                    mStatusBlueTv.setText("Bluetooth is Available");
                 }
                 catch(IOException e)
                 {
-                    showToast("Error sending Get Alarm Temperature code");
-
+                    showToast("Error disconnecting");
                 }
+
+
+                mDisconnectBtn.setVisibility(View.INVISIBLE);
+                mSetAlTempBtn.setVisibility(View.INVISIBLE);
+                mGetAlTempBtn.setVisibility(View.INVISIBLE);
+                mCheckTempBtn.setVisibility(View.INVISIBLE);
 
             }
         });
+
 
         mSetAlTempBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-               // final String mSetAlTempCode = "01 " + Integer.toString(mAlTemp);
+
                 builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Set alarm temperature");
 
 
                 builder.setMessage("Enter the alarm temperature in CELSIUS DEGREES");
-
-
 
                 input = new EditText(MainActivity.this);
                 input.setInputType(InputType.TYPE_CLASS_NUMBER);
@@ -224,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialogInterface, int i) {
                         try {
                             mAlTemp = Integer.parseInt(input.getText().toString());
+                            gotInput=true;
                         }
                         catch (NumberFormatException e)
                         {
@@ -240,13 +229,77 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-                new getTemperatureAl().execute();
+                AlertDialog dialog = builder.create();
+                dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialogInterface) {
+                        try
+                        {
+                            mBlueSocket.getOutputStream().write(0x001);
+                            mBlueSocket.getOutputStream().write(mAlTemp);
+                            // mBlueSocket.getOutputStream().write(Integer.toString(mAlTemp).getBytes());
+                        }
+                        catch (IOException e)
+                        {
+                            showToast("Error sending Set Alarm Temperature code");
+                        }
+                    }
+                });
+                dialog.show();
+            }
+        });
 
+        mGetAlTempBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try
+                {
+                    mInputTv.append("Alarm temperature: ");
+                    mBlueSocket.getOutputStream().write(0x002);
+                }
+                catch(IOException e)
+                {
+                    showToast("Error sending Get Alarm Temperature code");
 
+                }
 
             }
         });
 
+        mCheckTempBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try
+                { mInputTv.append("Temperature = ");
+                  mBlueSocket.getOutputStream().write(0x003);
+                }
+                catch(IOException e)
+                {
+                    showToast("Error sending Get Alarm Temperature code");
+
+                }
+
+            }
+        });
+
+
+
+        mDevicesLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                //we no longer need to look for devices since
+                // we found the one we want to connect with
+                mBlueAdapter.cancelDiscovery();
+                //get the devices MAC address
+                info = ((TextView) view).getText().toString();
+                MACAddress = getMACAddress(info);
+                BluetoothDevice device = mBlueAdapter.getRemoteDevice(MACAddress);
+                if(device.getBondState()==BluetoothDevice.BOND_NONE)
+                    new BTPair().execute();
+                if(device.getBondState()==BluetoothDevice.BOND_BONDED)
+                    new  BTConnect().execute();
+            }
+        });
 
     }
 
@@ -259,13 +312,7 @@ public class MainActivity extends AppCompatActivity {
             if(BluetoothDevice.ACTION_FOUND.equals(action))
             {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-              // mDiscoveredTv.append("\n" + device.getName() + "," + device );
-//                CheckBox cb = new CheckBox(getApplicationContext());
-//                cb.setText(device.getName() +": " + device.getAddress());
-//                cb.setId(ListBoxes.size());
-//                MainLayout.addView(cb);
-//                ListBoxes.add(cb);
-                listDevices.add("\n Visible: " + device.getName() + ": " + device.getAddress());
+                listDevices.add("\nVisible: " + device.getName() + ": " + device.getAddress());
                 adapter.notifyDataSetChanged();
             }
 
@@ -292,7 +339,7 @@ public class MainActivity extends AppCompatActivity {
                 else
                 {
                     //user denied to turn bluetooth on
-                    showToast("inable to turn Bluetooth on");
+                    showToast("Unable to turn Bluetooth on");
                 }
             break;
         }
@@ -304,12 +351,8 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
-
-
     private class BTPair extends AsyncTask<Void, Void, Void>
     {
-
-
         @Override
         protected Void doInBackground(Void... devices)
         {
@@ -318,16 +361,15 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
+        @Override
+        protected void onPostExecute(Void result)
+        {
+            mShowBtn.callOnClick();// Refresh the list of devices
+        }
     }
 
     private class BTConnect extends AsyncTask<Void, Void, Void>
     {
-        @Override
-        protected void onPreExecute()
-        {
-          //  progress = ProgressDialog.show(MainActivity.this, "Connecting...", "Please wait!");
-        }
-
         @Override
         protected Void doInBackground(Void... devices)
         {
@@ -343,42 +385,75 @@ public class MainActivity extends AppCompatActivity {
             }
             catch(IOException e)
             {
-               // showToast("Could not connect to device");
-               // progress = ProgressDialog.show(MainActivity.this, "Connecting...", );
                 Log.e("","Connect method failed", e);
             }
             return null;
         }
-
-    }
-
-    private class getTemperatureAl extends AsyncTask<Void, Void, Void>
-    {
-        @Override
-        protected Void doInBackground(Void... arg)
-        {
-
-
-            builder.show();
-            return null;
-        }
-
         @Override
         protected void onPostExecute(Void result)
         {
-            try
-            {
-                mBlueSocket.getOutputStream().write(0x001);
-                mBlueSocket.getOutputStream().write(mAlTemp);
-                // mBlueSocket.getOutputStream().write(Integer.toString(mAlTemp).getBytes());
-            }
-            catch (IOException e)
-            {
-                showToast("Error sending Set Alarm Temperature code");
-            }
+            //the info begins with the keyword paired/visible and since the length of both
+            // differes only by one and the following character is a space
+            // i remove the first 7 characters of info
+            mStatusBlueTv.setText("Bluetooth connected to: " + "\n" +info.substring(8));
+            mDisconnectBtn.setVisibility(View.VISIBLE);
+            mSetAlTempBtn.setVisibility(View.VISIBLE);
+            mGetAlTempBtn.setVisibility(View.VISIBLE);
+            mCheckTempBtn.setVisibility(View.VISIBLE);
+            mReadThread = new ReadThread(mBlueSocket, MainActivity.this);
+            mReadThread.start();
         }
+
     }
 
+    private class ReadThread extends Thread
+    {
+        private final InputStream mmInStream;
+        Activity activity;
+        //Constructor fot the RunThread
+        public  ReadThread(BluetoothSocket socket, Activity activity)
+        {
+            this.activity = activity;
+            InputStream tmpIn = null;
+            try{
+                tmpIn = socket.getInputStream();
+            }catch(IOException e){
+
+            }
+            mmInStream = tmpIn;
+
+        }
+
+        public void run(){
+            byte[] buffer = new byte[256];
+            int bytes;
+
+            //loop for received messages until an error appears
+            while(true){
+                try {
+                    bytes = mBlueSocket.getInputStream().read(buffer);
+                    String readMessage = new String(buffer, 0, bytes);
+                    //showToast(readMessage);
+                    Log.d("DEBUG","Input: "+ readMessage);
+                    writeInput(readMessage);
+
+                } catch (IOException e) {
+                    break;
+                }
+            }
+
+
+        }
+        private void writeInput(String s){
+            final String str = s;
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mInputTv.append(str);
+                }
+            });
+        }
+    }
 
 }
 

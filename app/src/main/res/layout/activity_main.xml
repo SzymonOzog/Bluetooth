@@ -80,12 +80,12 @@
         android:gravity="center_horizontal">
 
         <Button
-            android:id="@+id/discoverBtn"
+            android:id="@+id/disconnectBtn"
             style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="50dp"
-
-            android:text="Discover Devices" />
+            android:visibility="invisible"
+            android:text="Disconnect" />
 
     </TableRow>
 
@@ -102,7 +102,8 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Set Alarm" />
+            android:text="Set Alarm"
+            android:visibility="invisible"/>
 
         <!--Get list of paired devices button-->
         <Button
@@ -111,7 +112,8 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Get Alarm Value" />
+            android:text="Get Alarm Value"
+            android:visibility="invisible"/>
 
         <!--Get list of paired devices button-->
         <Button
@@ -120,7 +122,8 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Check temperature" />
+            android:text="Check temperature"
+            android:visibility="invisible"/>
 
 
     </TableRow>
@@ -134,8 +137,16 @@
         <ListView
             android:id="@+id/devicesLv"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="120dp" />
     </TableRow>
+    <TableRow>
 
+        <TextView
+            android:id="@+id/inputTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scrollbars="vertical" />
+
+    </TableRow>
 
 </TableLayout>
