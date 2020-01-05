@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
                     showToast("Error disconnecting");
                 }
 
-
+                //set the buttons invisible so the user wouldn`t cause an error
                 mDisconnectBtn.setVisibility(View.INVISIBLE);
                 mSetAlTempBtn.setVisibility(View.INVISIBLE);
                 mGetAlTempBtn.setVisibility(View.INVISIBLE);
@@ -195,8 +195,6 @@ public class MainActivity extends AppCompatActivity {
         mSetAlTempBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-
                 builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Set alarm temperature");
 
@@ -351,6 +349,7 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
+    //class that pairs with the bluetooth device
     private class BTPair extends AsyncTask<Void, Void, Void>
     {
         @Override
@@ -368,6 +367,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // class that connects with the bluetooth device
     private class BTConnect extends AsyncTask<Void, Void, Void>
     {
         @Override
@@ -396,6 +396,7 @@ public class MainActivity extends AppCompatActivity {
             // differes only by one and the following character is a space
             // i remove the first 7 characters of info
             mStatusBlueTv.setText("Bluetooth connected to: " + "\n" +info.substring(8));
+            //Show the buttons
             mDisconnectBtn.setVisibility(View.VISIBLE);
             mSetAlTempBtn.setVisibility(View.VISIBLE);
             mGetAlTempBtn.setVisibility(View.VISIBLE);
@@ -405,7 +406,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
+    // a thread that works in the background reading all information coming from the HC-05
+    // module and printing it in a text view
     private class ReadThread extends Thread
     {
         private final InputStream mmInStream;
@@ -424,13 +426,16 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        public void run(){
+        public void run()
+        {
             byte[] buffer = new byte[256];
             int bytes;
 
             //loop for received messages until an error appears
-            while(true){
-                try {
+            while(true)
+            {
+                try
+                {
                     bytes = mBlueSocket.getInputStream().read(buffer);
                     String readMessage = new String(buffer, 0, bytes);
                     //showToast(readMessage);
@@ -441,14 +446,15 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 }
             }
-
-
         }
-        private void writeInput(String s){
+        private void writeInput(String s)
+        {
             final String str = s;
-            activity.runOnUiThread(new Runnable() {
+            activity.runOnUiThread(new Runnable()
+            {
                 @Override
-                public void run() {
+                public void run()
+                {
                     mInputTv.append(str);
                 }
             });
